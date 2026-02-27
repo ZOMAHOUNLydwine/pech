@@ -1,0 +1,10 @@
+fastapi==0.110.0
+uvicorn==0.27.1
+pydantic==2.6.3
+python-dotenv==1.0.1
+sqlalchemy==2.0.28
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9PyJWT==2.8.1
+slowapi==0.1.9
+email-validator==2.1.0
+pydantic[email]==2.6.3
