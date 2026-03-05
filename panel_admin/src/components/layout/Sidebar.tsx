@@ -6,7 +6,8 @@ import {
     MessageSquare,
     LogOut,
     X,
-    ShieldCheck
+    ShieldCheck,
+    BookOpen
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -19,6 +20,8 @@ interface SidebarProps {
 
 const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'courses', label: 'Cours', icon: BookOpen },
+    { id: 'levels', label: 'Niveaux', icon: BarChart3 },
     { id: 'users', label: 'Utilisateurs', icon: Users },
     { id: 'stats', label: 'Statistiques', icon: BarChart3 },
     { id: 'messages', label: 'Messages', icon: MessageSquare },

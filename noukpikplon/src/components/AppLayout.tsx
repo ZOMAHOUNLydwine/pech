@@ -2,12 +2,11 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Award, BookOpen, BarChart2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useApp } from '@/context/AppContext';
+import Sidebar from './Sidebar';
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useApp();
 
   const navItems = [
     { icon: Home, label: 'Accueil', path: '/dashboard' },
@@ -18,12 +17,18 @@ export default function AppLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-earth-50 pb-20">
-      <Outlet />
-      
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-earth-200 py-2 px-4 z-50">
-        <div className="max-w-md mx-auto flex justify-between items-center">
+    <div className="min-h-screen bg-earth-50">
+      <Sidebar />
+
+      <main className="md:pl-64 min-h-screen">
+        <div className="pb-20 md:pb-0">
+          <Outlet />
+        </div>
+      </main>
+
+      {/* Bottom Nav - Mobile Only */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-earth-200 py-2 px-4 z-50 md:hidden">
+        <div className="flex justify-between items-center max-w-md mx-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
