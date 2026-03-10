@@ -28,7 +28,11 @@ const navItems = [
     { id: 'settings', label: 'Paramètres', icon: Settings },
 ];
 
+import { useAuth } from '../../context/AuthContext';
+
 export default function Sidebar({ isOpen, setIsOpen, activeSection, setActiveSection }: SidebarProps) {
+    const { logout } = useAuth();
+
     return (
         <>
             {/* Mobile Overlay */}
@@ -91,7 +95,10 @@ export default function Sidebar({ isOpen, setIsOpen, activeSection, setActiveSec
 
                     {/* Bottom Actions */}
                     <div className="p-4 border-t border-earth-100">
-                        <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors group">
+                        <button
+                            onClick={logout}
+                            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors group"
+                        >
                             <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                             <span className="font-semibold text-sm">Déconnexion</span>
                         </button>

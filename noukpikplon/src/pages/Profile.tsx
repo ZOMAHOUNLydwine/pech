@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp, LANGUAGES } from '@/context/AppContext';
 import { Check, X, Camera, Bell, Clock, ChevronRight, Globe, MessageCircle, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -7,25 +7,44 @@ import { useNavigate } from 'react-router-dom';
 export default function Profile() {
   const { user, updateUser, logout } = useApp();
   const navigate = useNavigate();
-  
-  // Local state for form fields
+
+  // Local state for form fields - initialized from user context
   const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState('utilisateur@example.com');
-  const [password, setPassword] = useState('password123');
-  const [notifications, setNotifications] = useState(true);
-  const [reminders, setReminders] = useState(true);
-  const [reminderTime, setReminderTime] = useState('20:00');
+  const [email, setEmail] = useState(user.email || '');
+  const [notifications, setNotifications] = useState(user.notifications);
+  const [reminders, setReminders] = useState(user.reminders);
+  const [reminderTime, setReminderTime] = useState(user.reminderTime || '20:00');
+
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showNativeLanguageModal, setShowNativeLanguageModal] = useState(false);
+
+  // Sync local state if user changes (e.g. after background refetch)
+  useEffect(() => {
+    setName(user.name);
+    setEmail(user.email || '');
+    setNotifications(user.notifications);
+    setReminders(user.reminders);
+    setReminderTime(user.reminderTime || '20:00');
+  }, [user.name, user.email, user.notifications, user.reminders, user.reminderTime]);
 
   const targetLang = LANGUAGES.find(l => l.id === user.targetLanguage);
   const nativeLang = LANGUAGES.find(l => l.id === user.knownLanguages[0]);
 
-  const handleSave = () => {
-    updateUser({ name });
-    // In a real app, we would save email, password, and settings to the backend here
-    alert("Profil mis à jour avec succès !");
-    navigate(-1);
+  const handleSave = async () => {
+    try {
+      await updateUser({
+        name,
+        email,
+        notifications,
+        reminders,
+        reminderTime
+      });
+      alert("Profil mis à jour avec succès !");
+      navigate(-1);
+    } catch (error) {
+      console.error("Save failed:", error);
+      alert("Erreur lors de la mise à jour du profil.");
+    }
   };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -60,7 +79,7 @@ export default function Profile() {
       </div>
 
       <div className="max-w-md mx-auto p-4 space-y-6">
-        
+
         {/* Profile Photo */}
         <div className="flex flex-col items-center space-y-4 py-4">
           <div className="relative group cursor-pointer" onClick={handleCameraClick}>
@@ -79,10 +98,10 @@ export default function Profile() {
             <button className="absolute bottom-0 right-0 p-2.5 bg-benin-green text-white rounded-full shadow-lg hover:bg-green-600 transition-transform hover:scale-110 border-2 border-white">
               <Camera className="h-4 w-4" />
             </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
               accept="image/*"
               onChange={handleFileChange}
             />
@@ -96,10 +115,10 @@ export default function Profile() {
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-earth-500 uppercase tracking-wider px-2">Apprentissage</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-earth-100 overflow-hidden">
-            
+
             {/* Native Language (Je parle) */}
-            <div 
-              className="p-4 border-b border-earth-50 flex items-center justify-between cursor-pointer hover:bg-earth-50 transition-colors" 
+            <div
+              className="p-4 border-b border-earth-50 flex items-center justify-between cursor-pointer hover:bg-earth-50 transition-colors"
               onClick={() => setShowNativeLanguageModal(true)}
             >
               <div className="flex items-center space-x-3">
@@ -112,14 +131,14 @@ export default function Profile() {
                 </div>
               </div>
               <div className="flex items-center text-earth-400">
-                 <span className="text-2xl mr-2">{nativeLang?.flag}</span>
-                 <ChevronRight className="h-5 w-5" />
+                <span className="text-2xl mr-2">{nativeLang?.flag}</span>
+                <ChevronRight className="h-5 w-5" />
               </div>
             </div>
 
             {/* Target Language (J'apprends) */}
-            <div 
-              className="p-4 border-b border-earth-50 flex items-center justify-between cursor-pointer hover:bg-earth-50 transition-colors" 
+            <div
+              className="p-4 border-b border-earth-50 flex items-center justify-between cursor-pointer hover:bg-earth-50 transition-colors"
               onClick={() => setShowLanguageModal(true)}
             >
               <div className="flex items-center space-x-3">
@@ -132,8 +151,8 @@ export default function Profile() {
                 </div>
               </div>
               <div className="flex items-center text-earth-400">
-                 <span className="text-2xl mr-2">{targetLang?.flag}</span>
-                 <ChevronRight className="h-5 w-5" />
+                <span className="text-2xl mr-2">{targetLang?.flag}</span>
+                <ChevronRight className="h-5 w-5" />
               </div>
             </div>
 
@@ -144,7 +163,7 @@ export default function Profile() {
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-earth-500 uppercase tracking-wider px-2">Abonnement</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-earth-100 overflow-hidden">
-            <div 
+            <div
               className="p-4 flex items-center justify-between cursor-pointer hover:bg-earth-50 transition-colors"
               onClick={() => navigate('/subscription')}
             >
@@ -157,19 +176,19 @@ export default function Profile() {
                     {user.isPremium ? "Premium" : "Gratuit"}
                   </span>
                   <span className="text-xs text-earth-500">
-                    {user.isPremium && user.subscriptionExpiry 
-                      ? `Expire le ${new Date(user.subscriptionExpiry).toLocaleDateString()}` 
+                    {user.isPremium && user.subscriptionExpiry
+                      ? `Expire le ${new Date(user.subscriptionExpiry).toLocaleDateString()}`
                       : "Passer à la version Premium"}
                   </span>
                 </div>
               </div>
               <div className="flex items-center text-earth-400">
-                 {!user.isPremium && (
-                   <span className="text-xs font-bold text-benin-green bg-benin-green/10 px-2 py-1 rounded-full mr-2">
-                     2000 F
-                   </span>
-                 )}
-                 <ChevronRight className="h-5 w-5" />
+                {!user.isPremium && (
+                  <span className="text-xs font-bold text-benin-green bg-benin-green/10 px-2 py-1 rounded-full mr-2">
+                    2000 F
+                  </span>
+                )}
+                <ChevronRight className="h-5 w-5" />
               </div>
             </div>
           </div>
@@ -179,13 +198,13 @@ export default function Profile() {
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-earth-500 uppercase tracking-wider px-2">Informations Personnelles</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-earth-100 overflow-hidden">
-            
+
             {/* Name Input */}
             <div className="p-4 border-b border-earth-50 flex flex-col space-y-1">
               <label className="text-xs font-bold text-earth-400 uppercase">Nom</label>
-              <input 
-                type="text" 
-                value={name} 
+              <input
+                type="text"
+                value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full text-earth-900 font-medium bg-transparent focus:outline-none placeholder-earth-300"
                 placeholder="Votre nom"
@@ -195,25 +214,26 @@ export default function Profile() {
             {/* Email Input */}
             <div className="p-4 border-b border-earth-50 flex flex-col space-y-1">
               <label className="text-xs font-bold text-earth-400 uppercase">Email</label>
-              <input 
-                type="email" 
-                value={email} 
+              <input
+                type="email"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full text-earth-900 font-medium bg-transparent focus:outline-none placeholder-earth-300"
                 placeholder="votre@email.com"
               />
             </div>
 
-            {/* Password Input */}
+            {/* Password Input (Read-only indication) */}
             <div className="p-4 flex flex-col space-y-1">
               <label className="text-xs font-bold text-earth-400 uppercase">Mot de passe</label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-earth-900 font-medium bg-transparent focus:outline-none placeholder-earth-300"
+              <input
+                type="password"
+                value="••••••••"
+                readOnly
+                className="w-full text-earth-400 font-medium bg-transparent focus:outline-none cursor-not-allowed"
                 placeholder="••••••••"
               />
+              <span className="text-[10px] text-earth-400">Pour changer de mot de passe, contactez le support.</span>
             </div>
 
           </div>
@@ -223,7 +243,7 @@ export default function Profile() {
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-earth-500 uppercase tracking-wider px-2">Paramètres</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-earth-100 overflow-hidden">
-            
+
             {/* Notifications Toggle */}
             <div className="p-4 border-b border-earth-50 flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -248,10 +268,10 @@ export default function Profile() {
 
             {/* Reminder Time Input */}
             {reminders && (
-              <div className="p-4 flex items-center justify-between bg-earth-50/50">
+              <div className="p-4 flex items-center justify-between bg-earth-50/50 scale-in-center">
                 <span className="text-sm text-earth-500 font-medium pl-12">Heure de rappel</span>
-                <input 
-                  type="time" 
+                <input
+                  type="time"
                   value={reminderTime}
                   onChange={(e) => setReminderTime(e.target.value)}
                   className="bg-white border border-earth-200 text-earth-900 text-sm rounded-lg focus:ring-benin-green focus:border-benin-green block p-2"
@@ -262,107 +282,92 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Danger Zone (Optional but good for "Complete") */}
+        {/* Danger Zone */}
         <div className="pt-4">
-            <button 
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
-              className="w-full py-3 text-red-500 font-medium text-sm hover:bg-red-50 rounded-xl transition-colors"
-            >
-                Se déconnecter
-            </button>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="w-full py-3 text-red-500 font-medium text-sm hover:bg-red-50 rounded-xl transition-colors"
+          >
+            Se déconnecter
+          </button>
         </div>
 
       </div>
 
-      {/* Target Language Modal */}
+      {/* Target Language Modal (using AppContext logic) */}
       {showLanguageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-4 border-b border-earth-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-earth-900">J'apprends</h3>
-              <button onClick={() => setShowLanguageModal(false)} className="p-2 hover:bg-earth-100 rounded-full">
-                <X className="h-5 w-5 text-earth-500" />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4 space-y-2">
-              {LANGUAGES.filter(l => l.isBeninese).map(lang => (
-                <button
-                  key={lang.id}
-                  onClick={() => {
-                    updateUser({ targetLanguage: lang.id });
-                    setShowLanguageModal(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between p-4 rounded-xl border transition-all",
-                    user.targetLanguage === lang.id 
-                      ? "border-benin-green bg-benin-green/5 ring-1 ring-benin-green" 
-                      : "border-earth-100 hover:border-benin-green/50 hover:bg-earth-50"
-                  )}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-3xl">{lang.flag}</span>
-                    <div className="text-left">
-                      <span className="block font-bold text-earth-900">{lang.name}</span>
-                      {lang.nativeName && <span className="text-xs text-earth-500">{lang.nativeName}</span>}
-                    </div>
-                  </div>
-                  {user.targetLanguage === lang.id && <Check className="h-5 w-5 text-benin-green" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <LanguageModal
+          onClose={() => setShowLanguageModal(false)}
+          type="target"
+          current={user.targetLanguage}
+        />
       )}
 
       {/* Native Language Modal */}
       {showNativeLanguageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-4 border-b border-earth-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg text-earth-900">Je parle</h3>
-              <button onClick={() => setShowNativeLanguageModal(false)} className="p-2 hover:bg-earth-100 rounded-full">
-                <X className="h-5 w-5 text-earth-500" />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4 space-y-2">
-              {LANGUAGES.filter(l => !l.isBeninese).map(lang => (
-                <button
-                  key={lang.id}
-                  onClick={() => {
-                    updateUser({ knownLanguages: [lang.id] });
-                    setShowNativeLanguageModal(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between p-4 rounded-xl border transition-all",
-                    user.knownLanguages[0] === lang.id 
-                      ? "border-benin-green bg-benin-green/5 ring-1 ring-benin-green" 
-                      : "border-earth-100 hover:border-benin-green/50 hover:bg-earth-50"
-                  )}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-3xl">{lang.flag}</span>
-                    <div className="text-left">
-                      <span className="block font-bold text-earth-900">{lang.name}</span>
-                      {lang.nativeName && <span className="text-xs text-earth-500">{lang.nativeName}</span>}
-                    </div>
-                  </div>
-                  {user.knownLanguages[0] === lang.id && <Check className="h-5 w-5 text-benin-green" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <LanguageModal
+          onClose={() => setShowNativeLanguageModal(false)}
+          type="native"
+          current={user.knownLanguages[0]}
+        />
       )}
+    </div>
+  );
+}
+
+function LanguageModal({ onClose, type, current }: { onClose: () => void; type: 'target' | 'native'; current: string | null }) {
+  const { updateUser } = useApp();
+  const options = type === 'target'
+    ? LANGUAGES.filter(l => l.id !== 'fr')
+    : LANGUAGES.filter(l => l.id === 'fr'); // Currently only French as native for this app version
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="p-4 border-b border-earth-100 flex justify-between items-center">
+          <h3 className="font-bold text-lg text-earth-900">{type === 'target' ? "J'apprends" : "Je parle"}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-earth-100 rounded-full">
+            <X className="h-5 w-5 text-earth-500" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-4 space-y-2">
+          {options.map(lang => (
+            <button
+              key={lang.id}
+              onClick={() => {
+                if (type === 'target') updateUser({ targetLanguage: lang.id });
+                else updateUser({ knownLanguages: [lang.id] });
+                onClose();
+              }}
+              className={cn(
+                "w-full flex items-center justify-between p-4 rounded-xl border transition-all",
+                current === lang.id
+                  ? "border-benin-green bg-benin-green/5 ring-1 ring-benin-green"
+                  : "border-earth-100 hover:border-benin-green/50 hover:bg-earth-50"
+              )}
+            >
+              <div className="flex items-center space-x-3">
+                <span className="text-3xl">{lang.flag}</span>
+                <div className="text-left">
+                  <span className="block font-bold text-earth-900">{lang.name}</span>
+                  <span className="text-xs text-earth-500">{lang.nativeName}</span>
+                </div>
+              </div>
+              {current === lang.id && <Check className="h-5 w-5 text-benin-green" />}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 function Switch({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (c: boolean) => void }) {
   return (
-    <button 
+    <button
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         "w-12 h-7 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-benin-green",

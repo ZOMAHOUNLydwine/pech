@@ -1,72 +1,45 @@
-import React, { useContext, useState, ReactNode } from 'react';
-
-export type Language = {
-  id: string;
-  name: string;
-  nativeName?: string;
-  flag?: string; // Emoji or url
-  isBeninese: boolean;
-};
-
-export type Badge = {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  unlockedAt?: Date;
-};
-
-export type Skill = {
-  name: 'Ecoute' | 'Lecture' | 'Expression' | 'Ecriture';
-  level: number; // 0-100
-};
-
-export type LessonStatus = 'locked' | 'available' | 'in_progress' | 'completed';
-export type LessonType = 'vocab' | 'grammar' | 'phonetic' | 'practice' | 'mission' | 'video' | 'music' | 'writing';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from '@/lib/api';
 
 export interface Lesson {
-  id: string;
+  id: string | number;
   title: string;
-  type: LessonType;
-  status: LessonStatus;
+  type: string;
+  status: 'completed' | 'available' | 'locked';
   stars?: number;
   xpReward: number;
-  textContent?: string;
-  mediaUrl?: string;
-  imageUrl?: string;
   audioUrl?: string;
   audioDuration?: string;
 }
 
 export interface Unit {
-  id: string;
+  id: string | number;
   title: string;
   description: string;
   color: string;
   canDo: string[];
   lessons: Lesson[];
+  spiralReview?: string[];
 }
 
 export interface Level {
-  id: string;
+  id: string | number;
   title: string;
   subtitle: string;
   color: string;
+  isLocked: boolean;
   units: Unit[];
-  isLocked?: boolean;
 }
 
 export interface Program {
-  id: string;
+  id: string | number;
   title: string;
   sourceLang: string;
   targetLang: string;
   levels: Level[];
 }
 
-export type Quest = Lesson;
-
-export type UserProfile = {
+export interface UserProfile {
   name: string;
   avatar?: string;
   knownLanguages: string[];
@@ -75,31 +48,48 @@ export type UserProfile = {
   learningType: 'heritage' | 'foreign' | null;
   streak: number;
   xp: number;
-  badges: Badge[];
-  skills: Skill[];
+  badges: string[];
+  skills: string[];
   completedQuests: string[];
   dailyGoal: number | null;
-  isAdmin?: boolean;
-};
-
-interface AppContextType {
-  user: UserProfile;
-  programs: Program[];
-  activeProgram: Program | null;
-  setActiveProgram: (id: string) => void;
-  updateProgram: (program: Program) => void;
-  updateUser: (updates: Partial<UserProfile>) => void;
-  isAuthenticated: boolean;
-  login: (role?: 'user' | 'admin') => void;
-  signup: (name: string, email: string, password: string) => void;
-  logout: () => void;
-  subscribe: () => void;
+  currentLevel?: string;
+  isAdmin: boolean;
+  email: string;
+  notifications: boolean;
+  reminders: boolean;
+  reminderTime: string;
+  subscriptionExpiry?: string;
 }
 
+export interface AppContextType {
+  user: UserProfile;
+  updateUser: (updates: Partial<UserProfile>) => Promise<void>;
+  programs: Program[];
+  activeProgram: Program | null;
+  setActiveProgram: (id: string | number) => void;
+  updateProgram: (program: Program) => void;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  signup: (name: string, email: string, password: string) => Promise<any>;
+  verifyOTP: (email: string, code: string) => Promise<any>;
+  resendOTP: (email: string) => Promise<any>;
+  logout: () => void;
+  completeLesson: (lessonId: number, stars: number) => Promise<void>;
+  loading: boolean;
+}
+
+export const LANGUAGES = [
+  { id: 'fon', name: 'Fon', nativeName: 'Fɔ̀ngbe', flag: '🇧🇯' },
+  { id: 'yor', name: 'Yoruba', nativeName: 'Yorùbá', flag: '🇳🇬' },
+  { id: 'dendi', name: 'Dendi', nativeName: 'Dendi', flag: '🇧🇯' },
+  { id: 'mina', name: 'Mina', nativeName: 'Gɛ̀ngbe', flag: '🇹🇬' },
+  { id: 'fr', name: 'Français', nativeName: 'Français', flag: '🇫🇷' },
+];
+
 const defaultUser: UserProfile = {
-  name: 'Utilisateur',
+  name: "Utilisateur",
   knownLanguages: ['fr'],
-  targetLanguage: 'fon',
+  targetLanguage: null,
   learningGoal: null,
   learningType: null,
   streak: 0,
@@ -109,121 +99,220 @@ const defaultUser: UserProfile = {
   completedQuests: [],
   dailyGoal: null,
   isAdmin: false,
+  email: "",
+  notifications: true,
+  reminders: true,
+  reminderTime: "20:00",
 };
 
-const MOCK_PROGRAMS: Program[] = [
-  {
-    id: 'fon-fr',
-    title: 'Français -> Fon',
-    sourceLang: 'fr',
-    targetLang: 'fon',
-    levels: [
-      {
-        id: 'lv0',
-        title: "Niveau 0",
-        subtitle: "Immersion Orale",
-        color: "bg-emerald-500",
-        isLocked: false,
-        units: [
-          {
-            id: "u0_1",
-            title: "Premiers Mots",
-            description: "Comprendre sans lire. 100% Audio.",
-            color: "bg-emerald-100 text-emerald-800",
-            canDo: ["Comprendre 10 mots", "Saluer"],
-            lessons: [
-              { id: 'l0_1_1', title: 'Bonjour !', type: 'vocab', status: 'completed', stars: 3, xpReward: 100, audioUrl: "/audio/salutations.mp3", audioDuration: "3:45" },
-              { id: 'l0_1_2', title: 'Oui / Non', type: 'vocab', status: 'completed', stars: 2, xpReward: 100 },
-              { id: 'l0_1_3', title: 'Ça va ?', type: 'practice', status: 'available', stars: 0, xpReward: 150 },
-            ]
-          }
-        ]
-      }
-    ]
-  }
-];
-
-
-const AppContext = React.createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile>(() => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : defaultUser;
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!localStorage.getItem('user');
-  });
-  const [programs, setPrograms] = useState<Program[]>(MOCK_PROGRAMS);
-  const [activeProgramId, setActiveProgramId] = useState<string>('fon-fr');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [activeProgramId, setActiveProgramId] = useState<string | number | null>(null);
 
-  const activeProgram = programs.find(p => p.id === activeProgramId) || programs[0];
+  const mapApiUser = (data: any): UserProfile => {
+    return {
+      name: data.name,
+      avatar: data.avatar ?? undefined,
+      knownLanguages: ['fr'],
+      targetLanguage: data.target_language ?? null,
+      learningGoal: data.learning_goal ?? null,
+      learningType: data.learning_type ?? null,
+      streak: data.streak ?? 0,
+      xp: data.xp ?? 0,
+      badges: [],
+      skills: [],
+      completedQuests: JSON.parse(data.completed_quests || '[]'),
+      dailyGoal: data.daily_goal ?? null,
+      isAdmin: data.role === 'admin',
+      email: data.email,
+      notifications: data.notifications ?? true,
+      reminders: data.reminders ?? true,
+      reminderTime: data.reminder_time ?? "20:00",
+      subscriptionExpiry: data.subscription_expiry ?? undefined,
+    };
+  };
 
-  const updateUser = (updates: Partial<UserProfile>) => {
+  const fetchPrograms = async () => {
+    try {
+      const response = await api.get('/content/programs');
+      const mapped = response.data.map((cat: any) => ({
+        id: cat.id,
+        title: cat.title,
+        sourceLang: cat.source_lang,
+        targetLang: cat.target_lang,
+        levels: cat.levels.map((lvl: any) => ({
+          id: lvl.id,
+          title: lvl.title,
+          subtitle: lvl.subtitle,
+          color: lvl.color,
+          isLocked: lvl.is_locked,
+          units: lvl.units.map((u: any) => ({
+            id: u.id,
+            title: u.title,
+            description: u.description,
+            color: u.color,
+            canDo: [],
+            lessons: u.lessons.map((l: any) => ({
+              id: l.id,
+              title: l.title,
+              type: l.lesson_type,
+              status: l.status,
+              stars: l.stars,
+              xpReward: l.xp_reward,
+              audioUrl: l.audio_url,
+              audioDuration: l.audio_duration
+            }))
+          }))
+        }))
+      }));
+      setPrograms(mapped);
+      if (mapped.length > 0 && !activeProgramId) {
+        setActiveProgramId(mapped[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to fetch programs:", error);
+    }
+  };
+
+  useEffect(() => {
+    const initData = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await api.get('/users/me');
+          const mapped = mapApiUser(response.data);
+          setUser(mapped);
+          localStorage.setItem('user', JSON.stringify(mapped));
+          setIsAuthenticated(true);
+          await fetchPrograms();
+        } catch (error) {
+          console.error("Failed to fetch user:", error);
+          logout();
+        }
+      } else {
+        setLoading(false);
+      }
+      setLoading(false);
+    };
+    initData();
+  }, [isAuthenticated]);
+
+  const activeProgram = programs.find(p => p.id === activeProgramId) || programs[0] || null;
+
+  const updateUser = async (updates: Partial<UserProfile>) => {
     setUser((prev) => {
       const newUser = { ...prev, ...updates };
       localStorage.setItem('user', JSON.stringify(newUser));
       return newUser;
     });
+
+    if (isAuthenticated) {
+      try {
+        const apiUpdates: any = {};
+        if (updates.name) apiUpdates.name = updates.name;
+        if (updates.email) apiUpdates.email = updates.email;
+        if (updates.avatar) apiUpdates.avatar = updates.avatar;
+        if (updates.targetLanguage) apiUpdates.target_language = updates.targetLanguage;
+        if (updates.learningGoal) apiUpdates.learning_goal = updates.learningGoal;
+        if (updates.learningType) apiUpdates.learning_type = updates.learningType;
+        if (updates.dailyGoal) apiUpdates.daily_goal = updates.dailyGoal;
+        if (updates.notifications !== undefined) apiUpdates.notifications = updates.notifications;
+        if (updates.reminders !== undefined) apiUpdates.reminders = updates.reminders;
+        if (updates.reminderTime) apiUpdates.reminder_time = updates.reminderTime;
+
+        if (Object.keys(apiUpdates).length > 0) {
+          await api.patch('/users/me', apiUpdates);
+        }
+      } catch (error) {
+        console.error("Failed to sync user profile with API:", error);
+      }
+    }
   };
 
   const updateProgram = (updatedProgram: Program) => {
     setPrograms(prev => prev.map(p => p.id === updatedProgram.id ? updatedProgram : p));
   };
 
-  const login = (role?: 'user' | 'admin') => {
-    // Mock login logic
-    const loggedInUser = {
-      ...user,
-      name: role === 'admin' ? 'Admin' : (user.name || 'Utilisateur'),
-      isAdmin: role === 'admin'
-    };
-    setUser(loggedInUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(loggedInUser));
-  };
+  const login = async (email: string, password: string) => {
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
 
-  const signup = (name: string, email: string, password: string) => {
-    // Mock signup logic
-    const newUser = { ...defaultUser, name, email };
-    setUser(newUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(newUser));
-  };
-
-  const subscribe = () => {
-    const expiryDate = new Date();
-    expiryDate.setMonth(expiryDate.getMonth() + 1);
-
-    setUser((prev) => {
-      const newUser = {
-        ...prev,
-        isPremium: true,
-      };
-      localStorage.setItem('user', JSON.stringify(newUser));
-      return newUser;
+    const response = await api.post('/auth/login', formData, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
+
+    const { access_token } = response.data;
+    localStorage.setItem('token', access_token);
+    setIsAuthenticated(true);
+
+    const userResponse = await api.get('/users/me');
+    const mapped = mapApiUser(userResponse.data);
+    setUser(mapped);
+    localStorage.setItem('user', JSON.stringify(mapped));
+    return mapped;
+  };
+
+  const signup = async (name: string, email: string, password: string) => {
+    const response = await api.post('/auth/signup', { name, email, password });
+    return response.data;
+  };
+
+  const verifyOTP = async (email: string, otp_code: string) => {
+    const response = await api.post('/auth/verify-otp', { email, otp_code });
+    return response.data;
+  };
+
+  const resendOTP = async (email: string) => {
+    const response = await api.post('/auth/resend-otp', { email });
+    return response.data;
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
-    setUser(defaultUser);
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setUser(defaultUser);
+    setIsAuthenticated(false);
+    setPrograms([]);
+  };
+
+  const completeLesson = async (lessonId: number, stars: number) => {
+    if (!isAuthenticated) return;
+    try {
+      const response = await api.post(`/content/lessons/${lessonId}/complete`, { stars });
+      const mappedUser = mapApiUser(response.data);
+      setUser(mappedUser);
+      localStorage.setItem('user', JSON.stringify(mappedUser));
+      await fetchPrograms();
+    } catch (error) {
+      console.error("Failed to complete lesson:", error);
+    }
   };
 
   return (
     <AppContext.Provider value={{
       user,
+      updateUser,
       programs,
       activeProgram,
-      setActiveProgram: setActiveProgramId,
+      setActiveProgram: (id) => setActiveProgramId(id),
       updateProgram,
-      updateUser,
       isAuthenticated,
       login,
       signup,
+      verifyOTP,
+      resendOTP,
       logout,
-      subscribe
+      completeLesson,
+      loading
     }}>
       {children}
     </AppContext.Provider>
@@ -237,24 +326,3 @@ export const useApp = () => {
   }
   return context;
 };
-
-export const LANGUAGES: Language[] = [
-  { id: 'fr', name: 'Français', isBeninese: false, flag: '🇫🇷' },
-  { id: 'en', name: 'English', isBeninese: false, flag: '🇬🇧' },
-  { id: 'es', name: 'Español', isBeninese: false, flag: '🇪🇸' },
-  { id: 'fon', name: 'Fon', nativeName: 'Fɔngbè', isBeninese: true, flag: '🇧🇯' },
-  { id: 'yo', name: 'Yoruba', nativeName: 'Yorùbá', isBeninese: true, flag: '🇧🇯' }, // Also Nago
-  { id: 'goun', name: 'Goun', nativeName: 'Gungbe', isBeninese: true, flag: '🇧🇯' },
-  { id: 'bariba', name: 'Bariba', nativeName: 'Baatɔnum', isBeninese: true, flag: '🇧🇯' },
-  { id: 'dendi', name: 'Dendi', nativeName: 'Dendi', isBeninese: true, flag: '🇧🇯' },
-  { id: 'adja', name: 'Adja', nativeName: 'Ajagbe', isBeninese: true, flag: '🇧🇯' },
-  { id: 'ditammari', name: 'Ditammari', nativeName: 'Ditammari', isBeninese: true, flag: '🇧🇯' },
-  { id: 'mina', name: 'Mina', nativeName: 'Gen', isBeninese: true, flag: '🇹🇬' }, // Togo/Benin
-  { id: 'anii', name: 'Anii', nativeName: 'Anii', isBeninese: true, flag: '🇧🇯' },
-  { id: 'fulfulde', name: 'Fulfulde', nativeName: 'Peul', isBeninese: true, flag: '🇧🇯' },
-  { id: 'mahi', name: 'Mahi', nativeName: 'Maxí', isBeninese: true, flag: '🇧🇯' },
-  { id: 'idaatcha', name: 'Idaatcha', nativeName: 'Idaatcha', isBeninese: true, flag: '🇧🇯' },
-  { id: 'ife', name: 'Ifè', nativeName: 'Ifè', isBeninese: true, flag: '🇧🇯' },
-  { id: 'waama', name: 'Waama', nativeName: 'Waama', isBeninese: true, flag: '🇧🇯' },
-  { id: 'tem', name: 'Tem', nativeName: 'Kotokoli', isBeninese: true, flag: '🇧🇯' }, // Tchamba
-];

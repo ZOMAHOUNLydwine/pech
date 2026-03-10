@@ -13,22 +13,31 @@ import AppLayout from '@/components/AppLayout';
 
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
+import VerifyOTP from '@/pages/VerifyOTP';
 import Subscription from '@/pages/Subscription';
 
 // Admin Imports
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminDashboard from '@/pages/admin/Dashboard';
+import AdminLevels from '@/pages/admin/Levels';
 import AdminContent from '@/pages/admin/Content';
 import AdminUsers from '@/pages/admin/Users';
 import AdminSettings from '@/pages/admin/Settings';
+import AdminStats from '@/pages/admin/Stats';
+import AdminMessages from '@/pages/admin/Messages';
 
 function AppRoutes() {
-  const { isAuthenticated, user } = useApp();
+  const { isAuthenticated, user, loading } = useApp();
+
+  if (loading) {
+    return null; // or a loading spinner
+  }
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/verify-otp" element={<VerifyOTP />} />
       <Route path="/" element={<Navigate to={isAuthenticated ? (user.targetLanguage ? "/dashboard" : "/onboarding") : "/onboarding"} replace />} />
       <Route path="/onboarding" element={<Onboarding />} />
 
@@ -43,9 +52,12 @@ function AppRoutes() {
         element={isAuthenticated && user.isAdmin ? <AdminLayout /> : <Navigate to="/login" replace />}
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="levels" element={<AdminLevels />} />
         <Route path="content" element={<AdminContent />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="stats" element={<AdminStats />} />
+        <Route path="messages" element={<AdminMessages />} />
       </Route>
 
       {/* Protected Routes wrapped in Layout */}

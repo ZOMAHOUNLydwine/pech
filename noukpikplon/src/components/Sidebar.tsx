@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Award, BookOpen, BarChart2, User, Crown, LogOut } from 'lucide-react';
+import { Home, Award, BookOpen, BarChart2, User, Crown, LogOut, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 
@@ -79,6 +79,16 @@ export default function Sidebar() {
                             <p className="text-xs text-earth-500 truncate">{user.xp} XP</p>
                         </div>
                     </div>
+
+                    {user.isAdmin && (
+                        <button
+                            onClick={() => navigate('/admin')}
+                            className="w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-benin-green hover:bg-green-50 transition-colors font-medium text-sm mb-2"
+                        >
+                            <ShieldAlert className="h-4 w-4" />
+                            <span>Administration</span>
+                        </button>
+                    )}
 
                     <button
                         onClick={logout}

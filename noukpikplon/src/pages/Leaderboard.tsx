@@ -1,18 +1,29 @@
 import React from 'react';
 import { useApp } from '@/context/AppContext';
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
 
 export default function Leaderboard() {
-  const { user } = useApp();
+  const { isAuthenticated } = useApp();
+  const [entries, setEntries] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const mockLeaderboard = [
-    { id: 1, name: "Koffi A.", xp: 2450, avatar: "👨🏿" },
-    { id: 2, name: "Sarah M.", xp: 2100, avatar: "👩🏼" },
-    { id: 3, name: "You (Guest)", xp: user.xp, avatar: "👤", isUser: true },
-    { id: 4, name: "David L.", xp: 1800, avatar: "👨🏻" },
-    { id: 5, name: "Aminata D.", xp: 1650, avatar: "👩🏿" },
-  ];
+  React.useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const response = await api.get('/leaderboard');
+        setEntries(response.data);
+      } catch (error) {
+        console.error("Failed to fetch leaderboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (isAuthenticated) fetchLeaderboard();
+    else setLoading(false);
+  }, [isAuthenticated]);
+
+  if (loading) return <div className="p-8 text-center text-earth-500 font-bold">Chargement du classement...</div>;
 
   return (
     <div className="max-w-md mx-auto p-4 space-y-6">
@@ -22,37 +33,42 @@ export default function Leaderboard() {
       </div>
 
       <div className="space-y-3">
-        {mockLeaderboard.map((entry, index) => (
-          <div 
-            key={entry.id}
-            className={cn(
-              "flex items-center p-4 rounded-2xl transition-all",
-              entry.isUser 
-                ? "bg-benin-green text-white shadow-lg scale-105 border-2 border-white" 
-                : "bg-white border border-earth-200"
-            )}
-          >
-            <div className={cn(
-              "w-8 font-bold text-lg",
-              index < 3 ? "text-benin-yellow" : "text-earth-400",
-              entry.isUser && "text-white"
-            )}>
-              #{index + 1}
+        {entries.length > 0 ? (
+          entries.map((entry, index) => (
+            <div
+              key={entry.id}
+              className={cn(
+                "flex items-center p-4 rounded-2xl transition-all",
+                entry.is_user
+                  ? "bg-benin-green text-white shadow-lg scale-105 border-2 border-white"
+                  : "bg-white border border-earth-200"
+              )}
+            >
+              <div className={cn(
+                "w-8 font-bold text-lg",
+                index < 3 ? (entry.is_user ? "text-white" : "text-benin-yellow") : (entry.is_user ? "text-white" : "text-earth-400")
+              )}>
+                #{index + 1}
+              </div>
+
+              <div className="w-10 h-10 rounded-full bg-earth-100 flex items-center justify-center text-xl mr-4 border-2 border-white/20">
+                {entry.avatar || "👤"}
+              </div>
+
+              <div className="flex-1 font-bold">
+                {entry.name}
+              </div>
+
+              <div className="font-mono font-bold opacity-90">
+                {entry.xp} XP
+              </div>
             </div>
-            
-            <div className="w-10 h-10 rounded-full bg-earth-100 flex items-center justify-center text-xl mr-4 border-2 border-white/20">
-              {entry.avatar}
-            </div>
-            
-            <div className="flex-1 font-bold">
-              {entry.name}
-            </div>
-            
-            <div className="font-mono font-bold opacity-90">
-              {entry.xp} XP
-            </div>
+          ))
+        ) : (
+          <div className="text-center py-12 text-earth-400">
+            Connectez-vous pour voir le classement.
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

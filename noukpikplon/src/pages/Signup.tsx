@@ -21,17 +21,10 @@ export default function Signup() {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (name && email && password) {
-        signup(name, email, password);
-        navigate('/onboarding');
-      } else {
-        setError('Veuillez remplir tous les champs');
-      }
-    } catch (err) {
-      setError('Une erreur est survenue');
+      const result = await signup(name, email, password);
+      navigate(`/verify-otp?email=${encodeURIComponent(result.email)}`);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Erreur lors de l’inscription');
     } finally {
       setIsLoading(false);
     }
@@ -109,8 +102,8 @@ export default function Signup() {
               </div>
             )}
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-benin-green hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-95"
               disabled={isLoading}
             >

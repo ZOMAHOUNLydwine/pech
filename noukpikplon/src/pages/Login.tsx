@@ -20,24 +20,10 @@ export default function Login() {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (email && password) {
-        login(email, password);
-        // Check if user has completed onboarding (e.g. has a target language)
-        // We need to check the *updated* user state, but login() updates state which might not be reflected immediately in 'user' variable here due to closure.
-        // However, for this mock, we can assume if they login, we check their data.
-        // Since login() in AppContext just sets a mock user, let's assume we redirect to dashboard by default, 
-        // but if we were using a real backend, we'd check the response.
-        
-        // For now, let's redirect to / which handles the routing logic in App.tsx
-        navigate('/'); 
-      } else {
-        setError('Veuillez remplir tous les champs');
-      }
-    } catch (err) {
-      setError('Une erreur est survenue');
+      await login(email, password);
+      navigate('/');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Identifiants incorrects');
     } finally {
       setIsLoading(false);
     }
@@ -97,8 +83,8 @@ export default function Login() {
               </div>
             )}
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-benin-green hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-95"
               disabled={isLoading}
             >

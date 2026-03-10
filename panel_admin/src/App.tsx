@@ -3,6 +3,8 @@ import Layout from './components/layout/Layout';
 import DashboardPage from './pages/DashboardPage';
 import ContentPage from './pages/ContentPage';
 import LevelsPage from './pages/LevelsPage';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import LoginPage from './pages/LoginPage';
 
 // Placeholder components for other sections
 const UsersPage = () => (
@@ -33,8 +35,21 @@ const SettingsPage = () => (
   </div>
 );
 
-function App() {
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-earth-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-benin-green border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   const renderContent = () => {
     switch (activeSection) {
@@ -61,6 +76,14 @@ function App() {
     <Layout activeSection={activeSection} setActiveSection={setActiveSection}>
       {renderContent()}
     </Layout>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
